@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: front-workshop-mantenimiento-auto
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080
+    networks:
+      - maintenance-network
+
+networks:
+  maintenance-network:
+    external: true
+    name: carcareconnect-network
+

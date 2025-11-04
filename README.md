@@ -1,46 +1,113 @@
-# Getting Started with Create React App
+# Front Workshop Mantenimiento Auto
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Dashboard de gestión para talleres mecánicos desarrollado con React, TypeScript y Tailwind CSS.
 
-## Available Scripts
+## 🚀 Características
 
-In the project directory, you can run:
+- **Autenticación**: Login y registro de talleres con JWT
+- **Dashboard**: Interfaz moderna y responsiva para gestión de talleres
+- **Gestión de Perfil**: Edición de información del workshop
+- **Rutas Protegidas**: Sistema de protección de rutas basado en autenticación
+- **UI Moderna**: Diseño con Tailwind CSS y componentes de Headless UI
 
-### `npm start`
+## 📋 Prerrequisitos
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- Node.js 16+ 
+- npm o yarn
+- Backend API (backed-mantenimiento-auto) corriendo en http://localhost:8080
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## 🔧 Instalación
 
-### `npm test`
+1. Instalar dependencias:
+```bash
+npm install
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+2. Crear archivo `.env` en la raíz del proyecto:
+```env
+REACT_APP_API_URL=http://localhost:8080
+```
 
-### `npm run build`
+## 🏃 Ejecución
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Para desarrollo:
+```bash
+npm start
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+La aplicación se abrirá en [http://localhost:3000](http://localhost:3000)
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Para producción:
+```bash
+npm run build
+```
 
-### `npm run eject`
+## 📦 Tecnologías Utilizadas
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+- **React 19**: Biblioteca de UI
+- **TypeScript**: Tipado estático
+- **React Router**: Navegación y rutas
+- **Axios**: Cliente HTTP
+- **Tailwind CSS**: Framework de estilos
+- **Headless UI**: Componentes sin estilos
+- **Heroicons**: Iconos SVG
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## 🏗️ Estructura del Proyecto
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+```
+src/
+├── components/
+│   ├── common/          # Componentes reutilizables
+│   │   ├── ProtectedRoute.tsx
+│   │   └── PublicRoute.tsx
+│   └── pages/           # Páginas principales
+│       ├── Login.tsx
+│       ├── Register.tsx
+│       ├── Dashboard.tsx
+│       └── WorkshopProfile.tsx
+├── contexts/            # Contextos de React
+│   └── AuthContext.tsx
+├── services/            # Servicios API
+│   └── api.ts
+├── types/               # Definiciones TypeScript
+│   └── index.ts
+└── App.tsx              # Componente principal
+```
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## 🔐 Autenticación
 
-## Learn More
+El sistema utiliza JWT para autenticación:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+1. **Registro**: El usuario se registra con username, email y contraseña
+2. **Login**: Se obtiene un token JWT que se almacena en localStorage
+3. **Protección**: Las rutas protegidas verifican la autenticación
+4. **Interceptor**: Axios agrega automáticamente el token a las peticiones
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## 🛣️ Rutas
+
+- `/` - Redirige a dashboard
+- `/login` - Página de inicio de sesión
+- `/register` - Página de registro
+- `/dashboard` - Dashboard principal (protegida)
+
+## 🔗 Integración con API
+
+### Endpoints consumidos:
+
+- `POST /api/v1/auth/login` - Autenticación
+- `POST /api/v1/auth/register/workshop` - Registro
+- `GET /api/v1/workshops` - Obtener información del workshop
+- `PUT /api/v1/workshops/{id}` - Actualizar información del workshop
+
+## 🐳 Docker (Opcional)
+
+Para ejecutar con Docker:
+
+```bash
+docker build -t front-workshop-mantenimiento-auto .
+docker run -p 3000:80 front-workshop-mantenimiento-auto
+```
+
+## 📝 Licencia
+
+Este proyecto es privado y de uso exclusivo del proyecto de mantenimiento automotriz.
