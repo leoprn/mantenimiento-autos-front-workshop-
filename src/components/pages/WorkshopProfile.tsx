@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { apiService } from '../../services/api';
 import { Workshop, UpdateWorkshopRequest } from '../../types';
 import { BuildingOfficeIcon, MapPinIcon, PhoneIcon } from '@heroicons/react/24/outline';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
+import { Button } from '../ui/button';
 import { COLORS } from '../../constants/colors';
 
 interface WorkshopProfileProps {
@@ -53,21 +55,23 @@ const WorkshopProfile: React.FC<WorkshopProfileProps> = ({ workshop, onUpdate })
   };
 
   return (
-    <div className="bg-white shadow-lg rounded-2xl border border-gray-200 p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Información del Workshop</h2>
-        {!isEditing && (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="text-white px-4 py-2 rounded-lg transition-all duration-200"
-            style={{ backgroundColor: COLORS.primary }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = COLORS.primaryHover}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = COLORS.primary}
-          >
-            Editar
-          </button>
-        )}
-      </div>
+    <Card className="shadow-lg">
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-2xl">Información del Workshop</CardTitle>
+          {!isEditing && (
+            <Button
+              onClick={() => setIsEditing(true)}
+              style={{ backgroundColor: COLORS.primary }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = COLORS.primaryHover}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = COLORS.primary}
+            >
+              Editar
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
 
       {error && (
         <div className="mb-4 rounded-lg bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 p-4">
@@ -151,19 +155,18 @@ const WorkshopProfile: React.FC<WorkshopProfileProps> = ({ workshop, onUpdate })
         </div>
 
         {isEditing && (
-          <div className="mt-6 flex justify-end space-x-3">
-            <button
+          <div className="mt-6 flex justify-end gap-3">
+            <Button
               type="button"
+              variant="outline"
               onClick={handleCancel}
-              className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
             >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-              style={{ backgroundColor: loading ? COLORS.primary : COLORS.primary }}
+              style={{ backgroundColor: COLORS.primary }}
               onMouseEnter={(e) => {
                 if (!loading) e.currentTarget.style.backgroundColor = COLORS.primaryHover;
               }}
@@ -172,11 +175,12 @@ const WorkshopProfile: React.FC<WorkshopProfileProps> = ({ workshop, onUpdate })
               }}
             >
               {loading ? 'Guardando...' : 'Guardar Cambios'}
-            </button>
+            </Button>
           </div>
         )}
       </form>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

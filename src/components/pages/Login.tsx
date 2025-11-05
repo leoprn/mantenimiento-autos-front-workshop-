@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Button } from '../ui/button';
+import { Separator } from '../ui/separator';
 import { COLORS } from '../../constants/colors';
 
 const Login: React.FC = () => {
@@ -37,99 +42,96 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 sm:p-6 lg:p-8">
+      <div className="w-full max-w-md space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <h2 className="text-center text-sm text-gray-500 mb-2">Iniciá sesión o registrate</h2>
-          <h3 className="text-2xl font-bold text-gray-900 text-left">
-            Te damos la bienvenida a Workshop
-          </h3>
+        <div className="space-y-2 text-center">
+          <h1 className="text-3xl font-bold tracking-tight">Te damos la bienvenida a Workshop</h1>
+          <p className="text-muted-foreground">Iniciá sesión o registrate para continuar</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            {error && (
-              <div className="rounded-lg bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 p-4 transition-all duration-300">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <ExclamationCircleIcon className="h-5 w-5 text-orange-500" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-orange-800">{error}</p>
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl">Iniciar sesión</CardTitle>
+            <CardDescription>
+              Ingresá tus credenciales para acceder a tu cuenta
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              {error && (
+                <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4">
+                  <div className="flex items-center gap-2">
+                    <ExclamationCircleIcon className="h-5 w-5 text-destructive" />
+                    <p className="text-sm text-destructive">{error}</p>
                   </div>
                 </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="username">Username o Email</Label>
+                <Input
+                  id="username"
+                  name="username"
+                  type="text"
+                  required
+                  value={formData.username}
+                  onChange={handleChange}
+                  placeholder="tu_usuario_o_email"
+                />
               </div>
-            )}
-            
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-                Username o Email
-              </label>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                required
-                value={formData.username}
-                onChange={handleChange}
-                className="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm"
-                placeholder="tu_usuario_o_email"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Contraseña
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                className="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm"
-                placeholder="Tu contraseña"
-              />
-            </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="password">Contraseña</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Tu contraseña"
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-3 border border-transparent text-base font-medium rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-              style={{ backgroundColor: COLORS.primary }}
-              onMouseEnter={(e) => {
-                if (!loading) e.currentTarget.style.backgroundColor = COLORS.primaryHover;
-              }}
-              onMouseLeave={(e) => {
-                if (!loading) e.currentTarget.style.backgroundColor = COLORS.primary;
-              }}
-            >
-              {loading ? 'Iniciando sesión...' : 'Continuar'}
-            </button>
-          </form>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full"
+                style={{ backgroundColor: COLORS.primary }}
+                onMouseEnter={(e) => {
+                  if (!loading) e.currentTarget.style.backgroundColor = COLORS.primaryHover;
+                }}
+                onMouseLeave={(e) => {
+                  if (!loading) e.currentTarget.style.backgroundColor = COLORS.primary;
+                }}
+              >
+                {loading ? 'Iniciando sesión...' : 'Continuar'}
+              </Button>
+            </form>
 
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
+            <div className="mt-6">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">¿No tienes cuenta?</span>
+                </div>
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">¿No tienes cuenta?</span>
-              </div>
+              
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-4 w-full"
+                onClick={() => navigate('/register')}
+              >
+                Registrarse
+              </Button>
             </div>
-            
-            <button
-              type="button"
-              onClick={() => navigate('/register')}
-              className="mt-4 w-full py-3 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
-            >
-              Registrarse
-            </button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

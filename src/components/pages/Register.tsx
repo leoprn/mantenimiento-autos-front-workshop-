@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Button } from '../ui/button';
+import { Separator } from '../ui/separator';
 import { COLORS } from '../../constants/colors';
 
 // Mapa de traducciones de mensajes de error del backend
@@ -92,118 +97,112 @@ const Register: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 sm:p-6 lg:p-8">
+      <div className="w-full max-w-md space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <h2 className="text-center text-sm text-gray-500 mb-2">Iniciá sesión o registrate</h2>
-          <h3 className="text-2xl font-bold text-gray-900 text-left">
-            Te damos la bienvenida a Workshop
-          </h3>
+        <div className="space-y-2 text-center">
+          <h1 className="text-3xl font-bold tracking-tight">Te damos la bienvenida a Workshop</h1>
+          <p className="text-muted-foreground">Creá tu cuenta para comenzar</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            {error && (
-              <div className="rounded-lg bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 p-4 transition-all duration-300">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <ExclamationCircleIcon className="h-5 w-5 text-orange-500" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-orange-800">{error}</p>
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl">Crear cuenta</CardTitle>
+            <CardDescription>
+              Ingresá tu información para crear una nueva cuenta
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              {error && (
+                <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4">
+                  <div className="flex items-center gap-2">
+                    <ExclamationCircleIcon className="h-5 w-5 text-destructive" />
+                    <p className="text-sm text-destructive">{error}</p>
                   </div>
                 </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="tu_email@ejemplo.com"
+                />
               </div>
-            )}
-            
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                className="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm"
-                placeholder="tu_email@ejemplo.com"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Contraseña
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                className="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm"
-                placeholder="Mínimo 8 caracteres"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                La contraseña debe tener entre 8 y 100 caracteres
-              </p>
-            </div>
-            
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                Confirmar Contraseña
-              </label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                required
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm"
-                placeholder="Repite la contraseña"
-              />
-            </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="password">Contraseña</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Mínimo 8 caracteres"
+                />
+                <p className="text-xs text-muted-foreground">
+                  La contraseña debe tener entre 8 y 100 caracteres
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  required
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Repite la contraseña"
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-3 border border-transparent text-base font-medium rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-              style={{ backgroundColor: COLORS.primary }}
-              onMouseEnter={(e) => {
-                if (!loading) e.currentTarget.style.backgroundColor = COLORS.primaryHover;
-              }}
-              onMouseLeave={(e) => {
-                if (!loading) e.currentTarget.style.backgroundColor = COLORS.primary;
-              }}
-            >
-              {loading ? 'Registrando...' : 'Continuar'}
-            </button>
-          </form>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full"
+                style={{ backgroundColor: COLORS.primary }}
+                onMouseEnter={(e) => {
+                  if (!loading) e.currentTarget.style.backgroundColor = COLORS.primaryHover;
+                }}
+                onMouseLeave={(e) => {
+                  if (!loading) e.currentTarget.style.backgroundColor = COLORS.primary;
+                }}
+              >
+                {loading ? 'Registrando...' : 'Continuar'}
+              </Button>
+            </form>
 
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
+            <div className="mt-6">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">¿Ya tienes cuenta?</span>
+                </div>
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">¿Ya tienes cuenta?</span>
-              </div>
+              
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-4 w-full"
+                onClick={() => navigate('/login')}
+              >
+                Iniciar Sesión
+              </Button>
             </div>
-            
-            <button
-              type="button"
-              onClick={() => navigate('/login')}
-              className="mt-4 w-full py-3 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
-            >
-              Iniciar Sesión
-            </button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
