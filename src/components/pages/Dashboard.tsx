@@ -1,52 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
 import { Workshop } from '../../types';
 import { 
-  Squares2X2Icon, 
+  Squares2X2Icon,
   UsersIcon,
-  DocumentTextIcon,
-  ClockIcon,
-  CurrencyDollarIcon,
-  CalculatorIcon,
-  CreditCardIcon,
-  Cog6ToothIcon,
   TruckIcon,
-  ChartBarIcon,
-  ArrowRightIcon,
   MagnifyingGlassIcon,
   QuestionMarkCircleIcon,
   BellIcon,
   EllipsisVerticalIcon,
   CalendarIcon,
-  DocumentArrowUpIcon,
-  BriefcaseIcon,
-  GlobeAltIcon,
   ChatBubbleLeftIcon,
-  UserGroupIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  SunIcon,
+  MoonIcon,
+  ShoppingCartIcon,
+  MegaphoneIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
+import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart';
+import { User, CreditCard, Bell, LogOut } from 'lucide-react';
 import { COLORS } from '../../constants/colors';
-
-interface Task {
-  id: number;
-  title: string;
-  description: string;
-  dueDate: string;
-  icon: React.ReactNode;
-}
-
-// Interface for future use
-// interface TeamMember {
-//   id: number;
-//   name: string;
-//   role: string;
-//   type: 'employee' | 'contractor';
-// }
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -55,50 +40,113 @@ const Dashboard: React.FC = () => {
   const [notifications, setNotifications] = useState(3);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Mock data para tareas
-  const [tasks] = useState<Task[]>([
+  // Mock data para estadísticas - últimos 6 meses
+  const [ordersChartData] = useState(() => {
+    const months = [];
+    const today = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      months.push({
+        month: date.toLocaleDateString('es-ES', { month: 'short' }),
+        orders: Math.floor(Math.random() * 100) + 50
+      });
+    }
+    return months;
+  });
+
+  const [clientsChartData] = useState(() => {
+    const months = [];
+    const today = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      months.push({
+        month: date.toLocaleDateString('es-ES', { month: 'short' }),
+        clients: Math.floor(Math.random() * 50) + 20
+      });
+    }
+    return months;
+  });
+
+  // Chart configs - se actualizan con el tema
+  const ordersChartConfig: ChartConfig = React.useMemo(() => ({
+    orders: {
+      label: 'Órdenes',
+      color: isDark ? '#3b82f6' : '#2563eb',
+    },
+  }), [isDark]);
+
+  const clientsChartConfig: ChartConfig = React.useMemo(() => ({
+    clients: {
+      label: 'Clientes',
+      color: isDark ? '#10b981' : '#059669',
+    },
+  }), [isDark]);
+
+  // Mock data para turnos
+  const getTodayAppointments = () => {
+    return [
+      { time: '09:00', client: 'Juan Pérez', service: 'Cambio de aceite' },
+      { time: '11:30', client: 'María González', service: 'Revisión general' },
+      { time: '14:00', client: 'Carlos Rodríguez', service: 'Alineación y balanceo' },
+      { time: '16:30', client: 'Ana Martínez', service: 'Revisión de frenos' }
+    ];
+  };
+
+  const getWeekAppointments = () => {
+    const today = new Date();
+    const week = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      const dayName = date.toLocaleDateString('es-ES', { weekday: 'short' });
+      const dayNumber = date.getDate();
+      const monthName = date.toLocaleDateString('es-ES', { month: 'short' });
+      week.push({
+        date: date,
+        dayName,
+        dayNumber,
+        monthName,
+        count: i === 0 ? 4 : Math.floor(Math.random() * 8) + 1
+      });
+    }
+    return week;
+  };
+
+  // Mock data para notificaciones
+  const [notificationsList] = useState([
     {
       id: 1,
-      title: 'Revisar solicitud de tiempo libre',
-      description: '1 solicitud necesita tu atención.',
-      dueDate: 'Hoy',
-      icon: <CalendarIcon className="h-5 w-5" />
+      type: 'warning',
+      title: 'Orden pendiente',
+      message: 'La orden #1234 necesita atención urgente',
+      time: 'Hace 2 horas',
+      icon: <ExclamationTriangleIcon className="h-5 w-5" />
     },
     {
       id: 2,
-      title: 'Procesar facturas de contratistas',
-      description: 'Tienes 1 factura de contratista sin pagar para revisar.',
-      dueDate: 'Hoy',
-      icon: <DocumentTextIcon className="h-5 w-5" />
+      type: 'info',
+      title: 'Nuevo cliente',
+      message: 'María González se ha registrado como nuevo cliente',
+      time: 'Hace 5 horas',
+      icon: <InformationCircleIcon className="h-5 w-5" />
     },
     {
       id: 3,
-      title: 'Subir documentos adicionales para onboarding',
-      description: 'Necesitamos algunos detalles más para asegurar que tu onboarding vaya bien.',
-      dueDate: 'Hoy',
-      icon: <DocumentArrowUpIcon className="h-5 w-5" />
+      type: 'success',
+      title: 'Orden completada',
+      message: 'La orden #1230 ha sido completada exitosamente',
+      time: 'Hace 1 día',
+      icon: <CheckCircleIcon className="h-5 w-5" />
     },
     {
       id: 4,
-      title: 'Configurar método de pago',
-      description: 'Esto evitará retrasar el pago de facturas y contratistas.',
-      dueDate: 'Ayer',
-      icon: <CreditCardIcon className="h-5 w-5" />
-    },
-    {
-      id: 5,
-      title: 'Completar verificación de empresa',
-      description: 'Para pagar empleados y contratistas y mantener seguro el taller, necesitaremos información adicional sobre tu empresa.',
-      dueDate: 'Ayer',
-      icon: <BriefcaseIcon className="h-5 w-5" />
+      type: 'warning',
+      title: 'Turno próximo',
+      message: 'Tienes un turno en 30 minutos con Juan Pérez',
+      time: 'Hace 2 horas',
+      icon: <CalendarIcon className="h-5 w-5" />
     }
   ]);
-
-  // Team members data - ready for future use
-  // const [teamMembers] = useState<TeamMember[]>([
-  //   { id: 1, name: 'Juan Pérez', role: 'Mecánico Senior', type: 'employee' },
-  //   { id: 2, name: 'María González', role: 'Mecánico', type: 'contractor' }
-  // ]);
 
   useEffect(() => {
     loadWorkshop();
@@ -114,16 +162,6 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleTaskClick = (taskId: number) => {
-    console.log('Task clicked:', taskId);
-    // Aquí puedes agregar navegación o lógica específica
-  };
-
-  const handleViewAll = (section: string) => {
-    console.log('View all clicked for:', section);
-    // Aquí puedes agregar navegación
   };
 
   const handleNotificationClick = () => {
@@ -143,7 +181,7 @@ const Dashboard: React.FC = () => {
   const displayName = userName.split('@')[0] || userName;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex relative">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex relative transition-colors duration-200">
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
@@ -154,280 +192,253 @@ const Dashboard: React.FC = () => {
 
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col h-screen z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed lg:static inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col h-screen z-50 transform transition-all duration-300 ease-in-out ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         {/* Close button for mobile */}
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <TruckIcon className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">Workshop</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white">Workshop</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
           >
-            <XMarkIcon className="h-6 w-6 text-gray-600" />
+            <XMarkIcon className="h-6 w-6 text-gray-600 dark:text-gray-300" />
           </button>
         </div>
         {/* Logo - Desktop only */}
-        <div className="hidden lg:block p-6 border-b border-gray-200">
+        <div className="hidden lg:block p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <TruckIcon className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">Workshop</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white">Workshop</span>
           </div>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-4">
-          {/* Dashboard */}
-          <button
-            onClick={() => {
-              setActiveSection('dashboard');
-              setSidebarOpen(false);
-            }}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition-colors ${
-              activeSection === 'dashboard'
-                ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
-                : 'text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <Squares2X2Icon className="h-5 w-5" />
-            <span className="font-medium">Dashboard</span>
-          </button>
+          <div className="space-y-1">
+            {/* Dashboard */}
+            <button
+              onClick={() => {
+                setActiveSection('dashboard');
+                setSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition-colors ${
+                activeSection === 'dashboard'
+                  ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+            >
+              <Squares2X2Icon className="h-5 w-5" />
+              <span className="font-medium">Dashboard</span>
+            </button>
 
-          {/* Taller Section */}
-          <div className="mt-6 mb-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">TALLER</p>
-            <div className="space-y-1">
-              <button
-                onClick={() => {
-                  setActiveSection('team');
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  activeSection === 'team'
-                    ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <UsersIcon className="h-5 w-5" />
-                <span>Equipo</span>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveSection('onboarding');
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  activeSection === 'onboarding'
-                    ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <UserGroupIcon className="h-5 w-5" />
-                <span>Onboarding</span>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveSection('timeoff');
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  activeSection === 'timeoff'
-                    ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <ClockIcon className="h-5 w-5" />
-                <span>Tiempo libre</span>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveSection('tracking');
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  activeSection === 'tracking'
-                    ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <ChartBarIcon className="h-5 w-5" />
-                <span>Seguimiento</span>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveSection('expenses');
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  activeSection === 'expenses'
-                    ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <CurrencyDollarIcon className="h-5 w-5" />
-                <span>Gastos</span>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveSection('calculator');
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  activeSection === 'calculator'
-                    ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <CalculatorIcon className="h-5 w-5" />
-                <span>Calculadora</span>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveSection('settings');
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  activeSection === 'settings'
-                    ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <Cog6ToothIcon className="h-5 w-5" />
-                <span>Configuración</span>
-              </button>
-            </div>
-          </div>
+            {/* Ordenes */}
+            <button
+              onClick={() => {
+                setActiveSection('ordenes');
+                setSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                activeSection === 'ordenes'
+                  ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+            >
+              <ShoppingCartIcon className="h-5 w-5" />
+              <span className="font-medium">Ordenes</span>
+            </button>
 
-          {/* Pagos Section */}
-          <div className="mt-6 mb-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">PAGOS</p>
-            <div className="space-y-1">
-              <button
-                onClick={() => {
-                  setActiveSection('payroll');
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  activeSection === 'payroll'
-                    ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <CurrencyDollarIcon className="h-5 w-5" />
-                <span>Nómina</span>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveSection('invoices');
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  activeSection === 'invoices'
-                    ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <DocumentTextIcon className="h-5 w-5" />
-                <span>Facturas</span>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveSection('billing');
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  activeSection === 'billing'
-                    ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <CreditCardIcon className="h-5 w-5" />
-                <span>Facturación</span>
-              </button>
-            </div>
+            {/* Clientes */}
+            <button
+              onClick={() => {
+                setActiveSection('clientes');
+                setSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                activeSection === 'clientes'
+                  ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+            >
+              <UsersIcon className="h-5 w-5" />
+              <span className="font-medium">Clientes</span>
+            </button>
+
+            {/* Turnos */}
+            <button
+              onClick={() => {
+                setActiveSection('turnos');
+                setSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                activeSection === 'turnos'
+                  ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+            >
+              <CalendarIcon className="h-5 w-5" />
+              <span className="font-medium">Turnos</span>
+            </button>
+
+            {/* Publicidades */}
+            <button
+              onClick={() => {
+                setActiveSection('publicidades');
+                setSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                activeSection === 'publicidades'
+                  ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+            >
+              <MegaphoneIcon className="h-5 w-5" />
+              <span className="font-medium">Publicidades</span>
+            </button>
           </div>
         </nav>
 
-        {/* Profile Section */}
-        <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-medium">
-                {displayName.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{displayName}</p>
-                <p className="text-xs text-gray-500 truncate">{workshop?.name || 'Workshop'}</p>
+        {/* Profile Section - Shadcn Style */}
+        <div className="p-2 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => setShowProfileMenu(!showProfileMenu)}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors group"
+          >
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-medium text-sm flex-shrink-0">
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{displayName}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{workshop?.name || 'Workshop'}</p>
+            </div>
+            <EllipsisVerticalIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </button>
+        </div>
+      </aside>
+
+      {/* User Dropdown Menu - Shadcn Style */}
+      {showProfileMenu && (
+        <>
+          {/* Overlay */}
+          <div
+            className="fixed inset-0 z-40 lg:left-64"
+            onClick={() => setShowProfileMenu(false)}
+          />
+          {/* Dropdown */}
+          <div className="fixed left-4 lg:left-auto lg:right-4 bottom-20 lg:top-16 z-50 w-64 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
+            {/* User Profile Header */}
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayName}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user || 'usuario@example.com'}</p>
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <EllipsisVerticalIcon className="h-5 w-5 text-gray-500" />
-            </button>
-          </div>
-          {showProfileMenu && (
-            <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-2">
+
+            {/* Menu Items */}
+            <div className="p-2">
               <button
                 onClick={() => {
                   setShowProfileMenu(false);
-                  setActiveSection('settings');
                 }}
-                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
-                Configuración
+                <User className="h-4 w-4" />
+                <span>Cuenta</span>
               </button>
               <button
-                onClick={logout}
-                className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
+                onClick={() => {
+                  setShowProfileMenu(false);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
-                Cerrar Sesión
+                <CreditCard className="h-4 w-4" />
+                <span>Facturación</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowProfileMenu(false);
+                  handleNotificationClick();
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <Bell className="h-4 w-4" />
+                <span>Notificaciones</span>
+                {notifications > 0 && (
+                  <span className="ml-auto w-2 h-2 bg-red-500 rounded-full"></span>
+                )}
+              </button>
+              <div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />
+              <button
+                onClick={() => {
+                  setShowProfileMenu(false);
+                  logout();
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Cerrar Sesión</span>
               </button>
             </div>
-          )}
-        </div>
-      </aside>
+          </div>
+        </>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-30">
+        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-30 transition-colors">
           <div className="flex items-center gap-4 flex-1">
             {/* Mobile Menu Button */}
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
-              <Bars3Icon className="h-6 w-6 text-gray-600" />
+              <Bars3Icon className="h-6 w-6 text-gray-600 dark:text-gray-300" />
             </button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">
+              <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">
                 Hola, {displayName} 👋
               </h1>
-              <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">Aquí está lo que está pasando hoy.</p>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden sm:block">Aquí está lo que está pasando hoy.</p>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-600" />
+            {/* Theme Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title={isDark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+            >
+              {isDark ? (
+                <SunIcon className="h-5 w-5 text-yellow-500" />
+              ) : (
+                <MoonIcon className="h-5 w-5 text-gray-600" />
+              )}
             </button>
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <QuestionMarkCircleIcon className="h-5 w-5 text-gray-600" />
+            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+            </button>
+            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <QuestionMarkCircleIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </button>
             <button
               onClick={handleNotificationClick}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors relative"
             >
-              <BellIcon className="h-5 w-5 text-gray-600" />
+              <BellIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
               {notifications > 0 && (
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               )}
@@ -436,133 +447,235 @@ const Dashboard: React.FC = () => {
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 transition-colors">
           {error && (
-            <div className="mb-6 rounded-lg bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 p-4">
-              <p className="text-orange-800 text-sm">{error}</p>
+            <div className="mb-6 rounded-lg bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-800 p-4">
+              <p className="text-orange-800 dark:text-orange-300 text-sm">{error}</p>
             </div>
           )}
 
-          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-            {/* Left Column - Main Content */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Things to do */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Cosas por hacer</h2>
-                <div className="space-y-3">
-                  {tasks.map((task) => (
-                    <button
-                      key={task.id}
-                      onClick={() => handleTaskClick(task.id)}
-                      className="w-full text-left p-3 sm:p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all group"
-                    >
-                      <div className="flex items-start gap-3 sm:gap-4">
-                        <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors flex-shrink-0">
-                          <div className="text-blue-600">{task.icon}</div>
+          <div className="max-w-7xl mx-auto">
+            {/* Dashboard Section */}
+            {activeSection === 'dashboard' && (
+              <div className="space-y-4">
+                {/* Statistics Widgets */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Orders Statistics Widget */}
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
+                      <CardTitle className="text-sm font-medium">Órdenes (Últimos 6 meses)</CardTitle>
+                      <ShoppingCartIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    </CardHeader>
+                    <CardContent className="px-4 pb-2">
+                      <ChartContainer config={ordersChartConfig} className="h-[200px]">
+                        <BarChart accessibilityLayer data={ordersChartData}>
+                          <CartesianGrid vertical={false} />
+                          <XAxis
+                            dataKey="month"
+                            tickLine={false}
+                            tickMargin={8}
+                            axisLine={false}
+                            tickFormatter={(value) => value}
+                            style={{ fontSize: '12px' }}
+                          />
+                          <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent hideLabel />}
+                          />
+                          <Bar 
+                            dataKey="orders" 
+                            fill={isDark ? "#3b82f6" : "#2563eb"} 
+                            radius={8} 
+                          />
+                        </BarChart>
+                      </ChartContainer>
+                    </CardContent>
+                    <CardFooter className="flex-col items-start gap-1 text-xs px-4 pb-4">
+                      <div className="flex gap-2 leading-none font-medium">
+                        <span className="text-gray-600 dark:text-gray-400">Total:</span>
+                        <span className="text-gray-900 dark:text-white font-bold">
+                          {ordersChartData.reduce((sum, item) => sum + item.orders, 0)}
+                        </span>
+                      </div>
+                      <div className="text-muted-foreground leading-none">
+                        Últimos 6 meses
+                      </div>
+                    </CardFooter>
+                  </Card>
+
+                  {/* Clients Statistics Widget */}
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
+                      <CardTitle className="text-sm font-medium">Clientes (Últimos 6 meses)</CardTitle>
+                      <UsersIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    </CardHeader>
+                    <CardContent className="px-4 pb-2">
+                      <ChartContainer config={clientsChartConfig} className="h-[200px]">
+                        <BarChart accessibilityLayer data={clientsChartData}>
+                          <CartesianGrid vertical={false} />
+                          <XAxis
+                            dataKey="month"
+                            tickLine={false}
+                            tickMargin={8}
+                            axisLine={false}
+                            tickFormatter={(value) => value}
+                            style={{ fontSize: '12px' }}
+                          />
+                          <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent hideLabel />}
+                          />
+                          <Bar 
+                            dataKey="clients" 
+                            fill={isDark ? "#10b981" : "#059669"} 
+                            radius={8} 
+                          />
+                        </BarChart>
+                      </ChartContainer>
+                    </CardContent>
+                    <CardFooter className="flex-col items-start gap-1 text-xs px-4 pb-4">
+                      <div className="flex gap-2 leading-none font-medium">
+                        <span className="text-gray-600 dark:text-gray-400">Total:</span>
+                        <span className="text-gray-900 dark:text-white font-bold">
+                          {clientsChartData.reduce((sum, item) => sum + item.clients, 0)}
+                        </span>
+                      </div>
+                      <div className="text-muted-foreground leading-none">
+                        Últimos 6 meses
+                      </div>
+                    </CardFooter>
+                  </Card>
+                </div>
+
+                {/* Appointments Calendar Widget */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-base font-semibold text-gray-900 dark:text-white">Turnos del Día</h2>
+                    <CalendarIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  
+                  {/* Today's Appointments */}
+                  <div className="mb-4">
+                    <h3 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-3">
+                      {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    </h3>
+                    <div className="space-y-2">
+                      {getTodayAppointments().map((appointment, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <div className="w-14 text-center">
+                            <span className="text-xs font-semibold text-gray-900 dark:text-white">{appointment.time}</span>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{appointment.client}</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">{appointment.service}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Week Calendar */}
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h3 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-3">Próximos 7 días</h3>
+                    <div className="grid grid-cols-7 gap-1.5">
+                      {getWeekAppointments().map((day, index) => (
+                        <div
+                          key={index}
+                          className={`flex flex-col items-center p-2 rounded-lg border transition-colors ${
+                            index === 0
+                              ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                              : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          <span className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">{day.dayName}</span>
+                          <span className={`text-base font-bold mb-0.5 ${
+                            index === 0
+                              ? 'text-blue-600 dark:text-blue-400'
+                              : 'text-gray-900 dark:text-white'
+                          }`}>
+                            {day.dayNumber}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">{day.monthName}</span>
+                          <div className="flex items-center gap-0.5">
+                            <CalendarIcon className="h-3 w-3 text-gray-400 dark:text-gray-500" />
+                            <span className="text-xs font-medium text-gray-900 dark:text-white">{day.count}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notifications Widget */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-base font-semibold text-gray-900 dark:text-white">Novedades y Notificaciones</h2>
+                    <BellIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div className="space-y-3">
+                    {notificationsList.map((notification) => (
+                      <div
+                        key={notification.id}
+                        className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <div className={`p-1.5 rounded-lg ${
+                          notification.type === 'warning'
+                            ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400'
+                            : notification.type === 'success'
+                            ? 'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400'
+                            : 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                        }`}>
+                          {notification.icon}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-sm sm:text-base text-gray-900 mb-1">{task.title}</h3>
-                          <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2">{task.description}</p>
-                          <span className={`text-xs font-medium ${
-                            task.dueDate === 'Hoy' ? 'text-orange-600' : 'text-gray-500'
-                          }`}>
-                            Vence: {task.dueDate}
-                          </span>
+                          <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">{notification.title}</h3>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">{notification.message}</p>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{notification.time}</span>
                         </div>
                       </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Upcoming public holidays */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Próximos feriados</h2>
-                <div className="p-3 sm:p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer">
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl sm:text-2xl font-bold text-gray-900">13</span>
-                        <span className="text-xs sm:text-sm text-gray-500">Nov</span>
-                      </div>
-                      <p className="font-medium text-sm sm:text-base text-gray-900 truncate">Día de la Independencia</p>
-                      <p className="text-xs sm:text-sm text-gray-500">Lun, 13 Nov, 2024</p>
-                    </div>
-                    <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
+                    ))}
                   </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column - Sidebar Info */}
-            <div className="space-y-6">
-              {/* Your team */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">Tu equipo (1)</h2>
-                  <button
-                    onClick={() => handleViewAll('team')}
-                    className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-                  >
-                    Ver todo <ArrowRightIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <button className="w-full mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+                    Ver todas las notificaciones
                   </button>
                 </div>
-                <div className="p-3 sm:p-4 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex items-center gap-3 mb-2">
-                    <UserGroupIcon className="h-5 w-5 text-green-600 flex-shrink-0" />
-                    <span className="font-medium text-sm sm:text-base text-gray-900">1 Contratista</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-green-700">+2 en onboarding ahora</p>
-                </div>
               </div>
+            )}
 
-              {/* Team by country */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">Equipo por país</h2>
-                  <button
-                    onClick={() => handleViewAll('countries')}
-                    className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-                  >
-                    Ver todo <ArrowRightIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                    <GlobeAltIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
-                    <span className="flex-1 text-sm sm:text-base text-gray-900">Argentina</span>
-                    <span className="text-xs sm:text-sm font-medium text-gray-600">1</span>
-                  </div>
-                </div>
+            {/* Ordenes Section */}
+            {activeSection === 'ordenes' && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8 transition-colors">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-6">Ordenes</h1>
+                <p className="text-gray-600 dark:text-gray-400">Aquí podrás gestionar todas las órdenes de trabajo.</p>
               </div>
+            )}
 
-              {/* Who's away */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">Quién está ausente</h2>
-                  <button
-                    onClick={() => handleViewAll('away')}
-                    className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-                  >
-                    Ver todo <ArrowRightIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
-                      CO
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">CO Abigail</p>
-                      <p className="text-xs text-gray-500">24 Oct - 26 Oct</p>
-                    </div>
-                  </div>
-                </div>
+            {/* Clientes Section */}
+            {activeSection === 'clientes' && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8 transition-colors">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-6">Clientes</h1>
+                <p className="text-gray-600 dark:text-gray-400">Aquí podrás gestionar todos los clientes del taller.</p>
               </div>
-            </div>
+            )}
+
+            {/* Turnos Section */}
+            {activeSection === 'turnos' && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8 transition-colors">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-6">Turnos</h1>
+                <p className="text-gray-600 dark:text-gray-400">Aquí podrás gestionar los turnos y citas de los clientes.</p>
+              </div>
+            )}
+
+            {/* Publicidades Section */}
+            {activeSection === 'publicidades' && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8 transition-colors">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-6">Publicidades</h1>
+                <p className="text-gray-600 dark:text-gray-400">Aquí podrás gestionar las publicidades y promociones del taller.</p>
+              </div>
+            )}
           </div>
         </div>
       </main>
