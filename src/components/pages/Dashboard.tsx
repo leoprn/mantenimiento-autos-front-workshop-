@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
-import { Workshop } from '../../types';
+import { Workshop, CompleteOnboardingRequest } from '../../types';
+import WorkshopOnboardingWizard from './WorkshopOnboardingWizard';
+import OnboardingProgressBadge from '../common/OnboardingProgressBadge';
 import { 
   Squares2X2Icon,
   UsersIcon,
@@ -50,6 +52,7 @@ const Dashboard: React.FC = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [notifications, setNotifications] = useState(3);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
 
   // Mock data para estadísticas - últimos 6 meses
   const [ordersChartData] = useState(() => {
@@ -198,11 +201,52 @@ const Dashboard: React.FC = () => {
       setLoading(true);
       const data = await apiService.getWorkshop();
       setWorkshop(data);
+      
+      // Verificar si el workshop necesita onboarding
+      // Mock: Si el workshop no tiene nombre o dirección, necesita onboarding
+      const needsOnboarding = !data.name || !data.address || data.name.trim() === '' || data.address.trim() === '';
+      setShowOnboardingWizard(needsOnboarding);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al cargar información del workshop');
+      // Si no hay workshop, mostrar wizard
+      setShowOnboardingWizard(true);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOnboardingComplete = async (data: CompleteOnboardingRequest) => {
+    try {
+      // Mock: Simular guardado de datos
+      console.log('Onboarding data:', data);
+      
+      // En producción, aquí se haría la llamada a la API
+      // await apiService.completeOnboarding(data);
+      
+      // Simular actualización del workshop
+      if (workshop) {
+        setWorkshop({
+          ...workshop,
+          name: data.name,
+          address: data.address
+        });
+      }
+      
+      // Ocultar wizard
+      setShowOnboardingWizard(false);
+      
+      // Recargar workshop para verificar estado
+      await loadWorkshop();
+      
+      // Mostrar mensaje de éxito
+      alert('¡Onboarding completado exitosamente!');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al completar el onboarding');
+    }
+  };
+
+  const handleContinueOnboarding = () => {
+    setShowOnboardingWizard(true);
   };
 
   const handleNotificationClick = () => {
@@ -215,6 +259,21 @@ const Dashboard: React.FC = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
+    );
+  }
+
+  // Mostrar wizard si es necesario
+  if (showOnboardingWizard) {
+    return (
+      <WorkshopOnboardingWizard
+        onComplete={handleOnboardingComplete}
+        onClose={() => {
+          // Permitir cerrar solo si el usuario realmente quiere salir
+          if (window.confirm('¿Estás seguro de que quieres salir? Podrás completar el onboarding más tarde.')) {
+            setShowOnboardingWizard(false);
+          }
+        }}
+      />
     );
   }
 
@@ -982,8 +1041,8 @@ const Dashboard: React.FC = () => {
         </div>
       </main>
 
-      {/* Floating Action Button */}
-      <Button
+      {/* Floating Action Button - Comentado temporalmente */}
+      {/* <Button
         size="icon"
         className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg hover:scale-110 z-20"
         style={{ backgroundColor: COLORS.primary }}
@@ -996,7 +1055,12 @@ const Dashboard: React.FC = () => {
         onClick={() => console.log('Chat opened')}
       >
         <ChatBubbleLeftIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-      </Button>
+      </Button> */}
+
+      {/* Onboarding Progress Badge - Solo mostrar si no está completo */}
+      {!showOnboardingWizard && (
+        <OnboardingProgressBadge onContinue={handleContinueOnboarding} />
+      )}
     </div>
   );
 };

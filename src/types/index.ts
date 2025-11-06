@@ -41,3 +41,44 @@ export interface ApiError {
   path?: string;
 }
 
+// Onboarding Wizard Types
+export interface Category {
+  id: number;
+  name: string;
+  description?: string;
+  icon?: string;
+}
+
+export interface Service {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+export interface CompleteOnboardingRequest {
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  categoryId: number;
+  serviceIds: number[];
+  logo?: File;
+  photos?: File[];
+}
+
+export interface OnboardingStatus {
+  isComplete: boolean;
+  completedSteps: string[];
+  missingSteps: string[];
+}
+
+// Extended Workshop with onboarding data
+export interface WorkshopExtended extends Workshop {
+  logoUrl?: string;
+  photos?: string[];
+  latitude?: number;
+  longitude?: number;
+  categoryId?: number;
+  serviceIds?: number[];
+}
+
