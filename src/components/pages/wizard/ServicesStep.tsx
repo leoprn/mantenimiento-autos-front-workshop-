@@ -1,32 +1,22 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { CheckIcon } from '@heroicons/react/24/solid';
-import { Button } from '../../ui/button';
-import { Label } from '../../ui/label';
 import { CompleteOnboardingRequest, Service } from '../../../types';
-import { getServicesByCategory, mockServices } from '../../../data/mockData';
 
 interface ServicesStepProps {
   formData: Partial<CompleteOnboardingRequest>;
   updateFormData: (data: Partial<CompleteOnboardingRequest>) => void;
   errors: Record<string, string>;
+  services: Service[];
+  isLoading: boolean;
 }
 
-const ServicesStep: React.FC<ServicesStepProps> = ({ formData, updateFormData, errors }) => {
+const ServicesStep: React.FC<ServicesStepProps> = ({ formData, updateFormData, errors, services, isLoading }) => {
   const selectedServiceIds = formData.serviceIds || [];
 
-  // Obtener servicios filtrados por categoría
-  const availableServices = useMemo(() => {
-    if (formData.categoryId) {
-      return getServicesByCategory(formData.categoryId);
-    }
-    return mockServices; // Si no hay categoría, mostrar todos
-  }, [formData.categoryId]);
-
-  const handleServiceToggle = (serviceId: number) => {
-    const currentIds = selectedServiceIds;
-    const newIds = currentIds.includes(serviceId)
-      ? currentIds.filter(id => id !== serviceId)
-      : [...currentIds, serviceId];
+  const handleServiceToggle = (serviceId: string) => {
+    const newIds = selectedServiceIds.includes(serviceId)
+      ? selectedServiceIds.filter(id => id !== serviceId)
+      : [...selectedServiceIds, serviceId];
     updateFormData({ serviceIds: newIds });
   };
 
@@ -41,6 +31,8 @@ const ServicesStep: React.FC<ServicesStepProps> = ({ formData, updateFormData, e
       </div>
     );
   }
+
+  const filteredServices = services.filter((service) => service.categoryId === formData.categoryId);
 
   return (
     <div className="space-y-6">
@@ -57,7 +49,11 @@ const ServicesStep: React.FC<ServicesStepProps> = ({ formData, updateFormData, e
         </div>
       )}
 
-      {availableServices.length === 0 ? (
+      {isLoading ? (
+        <div className="bg-muted rounded-lg p-6 text-center text-muted-foreground">
+          Cargando servicios...
+        </div>
+      ) : filteredServices.length === 0 ? (
         <div className="bg-muted rounded-lg p-8 text-center">
           <p className="text-sm text-muted-foreground">
             No hay servicios disponibles para esta categoría.
@@ -66,7 +62,7 @@ const ServicesStep: React.FC<ServicesStepProps> = ({ formData, updateFormData, e
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {availableServices.map((service) => {
+            {filteredServices.map((service) => {
               const isSelected = selectedServiceIds.includes(service.id);
               return (
                 <button
@@ -83,16 +79,14 @@ const ServicesStep: React.FC<ServicesStepProps> = ({ formData, updateFormData, e
                       <CheckIcon className="h-4 w-4" />
                     </div>
                   )}
-                  
+
                   <div className="flex items-center gap-3">
-                    <div className={`h-5 w-5 rounded border-2 flex items-center justify-center ${
-                      isSelected 
-                        ? 'border-primary bg-primary' 
-                        : 'border-muted-foreground'
-                    }`}>
-                      {isSelected && (
-                        <CheckIcon className="h-3 w-3 text-primary-foreground" />
-                      )}
+                    <div
+                      className={`h-5 w-5 rounded border-2 flex items-center justify-center ${
+                        isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'
+                      }`}
+                    >
+                      {isSelected && <CheckIcon className="h-3 w-3 text-primary-foreground" />}
                     </div>
                     <div className="flex-1">
                       <h4 className="font-medium">{service.name}</h4>
@@ -121,7 +115,7 @@ const ServicesStep: React.FC<ServicesStepProps> = ({ formData, updateFormData, e
               {selectedServiceIds.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {selectedServiceIds.map((serviceId) => {
-                    const service = mockServices.find(s => s.id === serviceId);
+                    const service = services.find((s) => s.id === serviceId);
                     return service ? (
                       <span
                         key={serviceId}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExclamationCircleIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import { Button } from '../ui/button';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
 
@@ -8,11 +8,13 @@ interface OnboardingProgressBadgeProps {
 }
 
 const OnboardingProgressBadge: React.FC<OnboardingProgressBadgeProps> = ({ onContinue }) => {
-  const { progress, getProgressPercentage } = useOnboardingProgress();
-  
-  if (!progress) return null;
+  const { status, progressPercentage, isLoading } = useOnboardingProgress();
 
-  const percentage = getProgressPercentage();
+  if (isLoading || !status || status.onboardingCompleted) {
+    return null;
+  }
+
+  const percentage = progressPercentage;
   const remaining = 100 - percentage;
 
   return (
@@ -20,19 +22,10 @@ const OnboardingProgressBadge: React.FC<OnboardingProgressBadgeProps> = ({ onCon
       <div className="bg-background border-2 border-primary/20 rounded-lg shadow-lg p-3 max-w-xs">
         <div className="flex items-start gap-2">
           <div className="flex-shrink-0">
-            {percentage < 100 ? (
-              <ExclamationCircleIcon className="h-4 w-4 text-yellow-500" />
-            ) : (
-              <CheckCircleIcon className="h-4 w-4 text-green-500" />
-            )}
+            <ExclamationCircleIcon className="h-4 w-4 text-yellow-500" />
           </div>
-          
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-xs mb-1">
-              {percentage < 100 ? 'Onboarding Incompleto' : 'Onboarding Completo'}
-            </h4>
-            
-            {/* Progress Bar */}
+            <h4 className="font-semibold text-xs mb-1">Onboarding Incompleto</h4>
             <div className="mb-1.5">
               <div className="flex justify-between text-[10px] mb-0.5">
                 <span className="text-muted-foreground">Progreso</span>
@@ -45,21 +38,12 @@ const OnboardingProgressBadge: React.FC<OnboardingProgressBadgeProps> = ({ onCon
                 />
               </div>
             </div>
-
-            {percentage < 100 && (
-              <>
-                <p className="text-[10px] text-muted-foreground mb-2 leading-tight">
-                  Te falta {remaining}% para completar la configuración de tu comercio
-                </p>
-                <Button
-                  onClick={onContinue}
-                  size="sm"
-                  className="w-full h-7 text-xs"
-                >
-                  Continuar
-                </Button>
-              </>
-            )}
+            <p className="text-[10px] text-muted-foreground mb-2 leading-tight">
+              Te falta {remaining}% para completar la configuración de tu comercio
+            </p>
+            <Button onClick={onContinue} size="sm" className="w-full h-7 text-xs">
+              Continuar
+            </Button>
           </div>
         </div>
       </div>

@@ -110,7 +110,7 @@ const LogoAndPhotosStep: React.FC<LogoAndPhotosStepProps> = ({ formData, updateF
             <div className="relative inline-block">
               <img
                 src={logoPreview}
-                alt="Logo preview"
+                alt="Vista previa del logo del taller"
                 className="h-32 w-32 object-cover rounded-lg border"
               />
               <Button
@@ -156,7 +156,7 @@ const LogoAndPhotosStep: React.FC<LogoAndPhotosStepProps> = ({ formData, updateF
                 <div key={index} className="relative">
                   <img
                     src={preview}
-                    alt={`Photo ${index + 1}`}
+                    alt={`Vista previa ${index + 1} del taller`}
                     className="h-24 w-full object-cover rounded-lg border"
                   />
                   <Button

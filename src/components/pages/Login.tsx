@@ -28,7 +28,19 @@ const Login: React.FC = () => {
       await login(formData);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al iniciar sesión');
+      const backendMessage = err?.response?.data?.error ?? err?.response?.data?.message;
+      if (err?.response?.status === 403) {
+        setError(
+          backendMessage ||
+            'Tu cuenta está pendiente de verificación o fue bloqueada. Revisá tu correo o contactá al soporte.'
+        );
+      } else {
+        setError(
+          backendMessage ||
+            err?.message ||
+            'Error al iniciar sesión'
+        );
+      }
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,18 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { LoginRequest, LoginResponse, RegisterRequest, Workshop, UpdateWorkshopRequest, ApiError } from '../types';
+import {
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+  Workshop,
+  UpdateWorkshopRequest,
+  ApiError,
+  Category,
+  Service,
+  WorkshopOnboardingStatus,
+  CompleteOnboardingRequest,
+  UserStatusResponse,
+  WorkshopOnboardingDraftRequest,
+} from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
@@ -40,7 +53,7 @@ class ApiService {
 
   // Auth endpoints
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const response = await this.api.post<LoginResponse>('/api/v1/auth/login', credentials);
+    const response = await this.api.post<LoginResponse>('/api/v1/auth/login/workshop', credentials);
     return response.data;
   }
 
@@ -62,6 +75,49 @@ class ApiService {
   async updateWorkshop(id: number, data: UpdateWorkshopRequest): Promise<Workshop> {
     const response = await this.api.put<Workshop>(`/api/v1/workshops/${id}`, data);
     return response.data;
+  }
+
+  async getCategories(): Promise<Category[]> {
+    const response = await this.api.get<Category[]>('/api/v1/services/categories');
+    return response.data;
+  }
+
+  async getServices(): Promise<Service[]> {
+    const response = await this.api.get<Service[]>('/api/v1/services');
+    return response.data;
+  }
+
+  async getOnboardingStatus(): Promise<WorkshopOnboardingStatus> {
+    const response = await this.api.get<WorkshopOnboardingStatus>('/api/v1/workshops/onboarding/status');
+    return response.data;
+  }
+
+  async saveOnboardingDraft(payload: WorkshopOnboardingDraftRequest): Promise<WorkshopOnboardingStatus> {
+    const response = await this.api.put<WorkshopOnboardingStatus>('/api/v1/workshops/onboarding/draft', payload);
+    return response.data;
+  }
+
+  async completeOnboarding(payload: CompleteOnboardingRequest): Promise<WorkshopOnboardingStatus> {
+    const response = await this.api.post<WorkshopOnboardingStatus>('/api/v1/workshops/onboarding/complete', this.withoutFiles(payload));
+    return response.data;
+  }
+
+  async getUserPermissions(): Promise<UserStatusResponse> {
+    const response = await this.api.get<UserStatusResponse>('/api/v1/auth/me/permissions');
+    return response.data;
+  }
+
+  private withoutFiles(payload: CompleteOnboardingRequest) {
+    return {
+      name: payload.name,
+      address: payload.address,
+      latitude: payload.latitude,
+      longitude: payload.longitude,
+      categoryId: payload.categoryId,
+      serviceIds: payload.serviceIds,
+      logoUrl: payload.logo ? payload.logo.name : undefined,
+      photoUrls: payload.photos ? payload.photos.map((file) => file.name) : [],
+    };
   }
 }
 

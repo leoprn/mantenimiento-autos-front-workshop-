@@ -76,7 +76,6 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
       const color = itemConfig.theme
         ? itemConfig.theme
         : itemConfig.color
-      const theme = itemConfig.theme ? "light dark" : ""
       return color
         ? `  --color-${key}: ${color};`
         : null

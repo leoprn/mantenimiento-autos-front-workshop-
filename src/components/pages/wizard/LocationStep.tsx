@@ -5,6 +5,11 @@ import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { CompleteOnboardingRequest } from '../../../types';
 
+const MOCK_COORDINATES = {
+  lat: -34.6037, // Buenos Aires
+  lng: -58.3816,
+};
+
 interface LocationStepProps {
   formData: Partial<CompleteOnboardingRequest>;
   updateFormData: (data: Partial<CompleteOnboardingRequest>) => void;
@@ -13,45 +18,43 @@ interface LocationStepProps {
 
 const LocationStep: React.FC<LocationStepProps> = ({ formData, updateFormData, errors }) => {
   const [searchAddress, setSearchAddress] = useState(formData.address || '');
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
-
-  // Mock coordinates (en producción esto vendría de geocodificación)
-  const mockCoordinates = {
-    lat: -34.6037, // Buenos Aires
-    lng: -58.3816
-  };
-
   useEffect(() => {
-    // Si ya hay coordenadas, centrar el mapa ahí
-    if (formData.latitude && formData.longitude) {
-      setMapCenter({ lat: formData.latitude, lng: formData.longitude });
-    } else {
-      // Intentar geolocalización del navegador
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords;
-            setMapCenter({ lat: latitude, lng: longitude });
-            updateFormData({ latitude, longitude });
-          },
-          () => {
-            // Si falla, usar coordenadas por defecto
-            setMapCenter(mockCoordinates);
-          }
-        );
-      } else {
-        setMapCenter(mockCoordinates);
-      }
+    if (
+      formData.latitude !== undefined &&
+      formData.latitude !== null &&
+      formData.longitude !== undefined &&
+      formData.longitude !== null
+    ) {
+      return;
     }
-  }, []);
+
+    const fallbackToMock = () => {
+      updateFormData({
+        latitude: MOCK_COORDINATES.lat,
+        longitude: MOCK_COORDINATES.lng,
+      });
+    };
+
+    if (!navigator.geolocation) {
+      fallbackToMock();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        updateFormData({ latitude, longitude });
+      },
+      fallbackToMock
+    );
+  }, [formData.latitude, formData.longitude, updateFormData]);
 
   const handleMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
     // En producción, esto obtendría las coordenadas reales del click en el mapa
     // Por ahora, usamos coordenadas mock
-    const lat = mockCoordinates.lat + (Math.random() - 0.5) * 0.01;
-    const lng = mockCoordinates.lng + (Math.random() - 0.5) * 0.01;
+    const lat = MOCK_COORDINATES.lat + (Math.random() - 0.5) * 0.01;
+    const lng = MOCK_COORDINATES.lng + (Math.random() - 0.5) * 0.01;
     updateFormData({ latitude: lat, longitude: lng });
-    setMapCenter({ lat, lng });
   };
 
   const handleUseCurrentLocation = () => {
@@ -60,7 +63,6 @@ const LocationStep: React.FC<LocationStepProps> = ({ formData, updateFormData, e
         (position) => {
           const { latitude, longitude } = position.coords;
           updateFormData({ latitude, longitude });
-          setMapCenter({ lat: latitude, lng: longitude });
         },
         () => {
           alert('No se pudo obtener tu ubicación actual');
@@ -75,14 +77,13 @@ const LocationStep: React.FC<LocationStepProps> = ({ formData, updateFormData, e
     // En producción, esto haría geocodificación real
     // Por ahora, usamos coordenadas mock
     if (searchAddress.trim()) {
-      const lat = mockCoordinates.lat + (Math.random() - 0.5) * 0.01;
-      const lng = mockCoordinates.lng + (Math.random() - 0.5) * 0.01;
+      const lat = MOCK_COORDINATES.lat + (Math.random() - 0.5) * 0.01;
+      const lng = MOCK_COORDINATES.lng + (Math.random() - 0.5) * 0.01;
       updateFormData({ 
         address: searchAddress,
         latitude: lat, 
         longitude: lng 
       });
-      setMapCenter({ lat, lng });
     }
   };
 

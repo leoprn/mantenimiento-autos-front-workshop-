@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
-import { Workshop, CompleteOnboardingRequest } from '../../types';
+import { Workshop, CompleteOnboardingRequest, Category, Service } from '../../types';
 import WorkshopOnboardingWizard from './WorkshopOnboardingWizard';
 import OnboardingProgressBadge from '../common/OnboardingProgressBadge';
 import { 
@@ -14,7 +15,6 @@ import {
   BellIcon,
   EllipsisVerticalIcon,
   CalendarIcon,
-  ChatBubbleLeftIcon,
   Bars3Icon,
   XMarkIcon,
   SunIcon,
@@ -25,11 +25,13 @@ import {
   InformationCircleIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
-import { Bar, BarChart, CartesianGrid, XAxis, Label, PolarGrid, PolarRadiusAxis, RadialBar, RadialBarChart } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, Label as RechartsLabel, PolarGrid, PolarRadiusAxis, RadialBar, RadialBarChart } from 'recharts';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart';
 import { User, CreditCard, Bell, LogOut, TrendingUp, Eye } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,7 +43,16 @@ import {
 import { Separator } from '../ui/separator';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { COLORS } from '../../constants/colors';
+
+type AccountFormState = {
+  name: string;
+  address: string;
+  phoneNumber: string;
+  latitude: string;
+  longitude: string;
+  categoryId: string;
+  serviceIds: string[];
+};
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -53,6 +64,21 @@ const Dashboard: React.FC = () => {
   const [notifications, setNotifications] = useState(3);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [accountForm, setAccountForm] = useState<AccountFormState>({
+    name: '',
+    address: '',
+    phoneNumber: '',
+    latitude: '',
+    longitude: '',
+    categoryId: '',
+    serviceIds: [],
+  });
+  const [accountErrors, setAccountErrors] = useState<Record<string, string>>({});
+  const [accountMessage, setAccountMessage] = useState('');
+  const [accountApiError, setAccountApiError] = useState('');
+  const [accountSaving, setAccountSaving] = useState(false);
 
   // Mock data para estadísticas - últimos 6 meses
   const [ordersChartData] = useState(() => {
@@ -199,50 +225,43 @@ const Dashboard: React.FC = () => {
   const loadWorkshop = async () => {
     try {
       setLoading(true);
-      const data = await apiService.getWorkshop();
-      setWorkshop(data);
-      
-      // Verificar si el workshop necesita onboarding
-      // Mock: Si el workshop no tiene nombre o dirección, necesita onboarding
-      const needsOnboarding = !data.name || !data.address || data.name.trim() === '' || data.address.trim() === '';
+      const [
+        workshopResponse,
+        permissions,
+        onboardingStatus,
+        categoriesResponse,
+        servicesResponse,
+      ] = await Promise.all([
+        apiService.getWorkshop(),
+        apiService.getUserPermissions(),
+        apiService.getOnboardingStatus(),
+        apiService.getCategories(),
+        apiService.getServices(),
+      ]);
+      setWorkshop(workshopResponse);
+      setCategories(categoriesResponse);
+      setServices(servicesResponse);
+
+      const needsOnboarding =
+        permissions.status !== 'ACTIVE' || !onboardingStatus.onboardingCompleted;
       setShowOnboardingWizard(needsOnboarding);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al cargar información del workshop');
-      // Si no hay workshop, mostrar wizard
-      setShowOnboardingWizard(true);
+      if (axios.isAxiosError(err) && err.response?.status === 404) {
+        setWorkshop(null);
+        setError('');
+        setShowOnboardingWizard(true);
+      } else {
+        setError(err.response?.data?.message || 'Error al cargar información del workshop');
+        setShowOnboardingWizard(true);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOnboardingComplete = async (data: CompleteOnboardingRequest) => {
-    try {
-      // Mock: Simular guardado de datos
-      console.log('Onboarding data:', data);
-      
-      // En producción, aquí se haría la llamada a la API
-      // await apiService.completeOnboarding(data);
-      
-      // Simular actualización del workshop
-      if (workshop) {
-        setWorkshop({
-          ...workshop,
-          name: data.name,
-          address: data.address
-        });
-      }
-      
-      // Ocultar wizard
-      setShowOnboardingWizard(false);
-      
-      // Recargar workshop para verificar estado
-      await loadWorkshop();
-      
-      // Mostrar mensaje de éxito
-      alert('¡Onboarding completado exitosamente!');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al completar el onboarding');
-    }
+  const handleOnboardingComplete = async (_data?: CompleteOnboardingRequest) => {
+    setShowOnboardingWizard(false);
+    await loadWorkshop();
   };
 
   const handleContinueOnboarding = () => {
@@ -252,6 +271,154 @@ const Dashboard: React.FC = () => {
   const handleNotificationClick = () => {
     setNotifications(0);
     // Aquí puedes abrir un panel de notificaciones
+  };
+
+  const clearAccountError = (field: string) => {
+    setAccountErrors((prev) => {
+      if (!prev[field]) {
+        return prev;
+      }
+      const { [field]: _removed, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  useEffect(() => {
+    if (activeSection === 'account') {
+      setAccountMessage('');
+      setAccountApiError('');
+    }
+
+    if (activeSection === 'account' && workshop) {
+      setAccountForm({
+        name: workshop.name || '',
+        address: workshop.address || '',
+        phoneNumber: workshop.phoneNumber || '',
+        latitude:
+          workshop.latitude !== undefined && workshop.latitude !== null ? workshop.latitude.toString() : '',
+        longitude:
+          workshop.longitude !== undefined && workshop.longitude !== null ? workshop.longitude.toString() : '',
+        categoryId: workshop.categoryId || '',
+        serviceIds: workshop.serviceIds ?? [],
+      });
+      setAccountErrors({});
+    }
+  }, [activeSection, workshop]);
+
+  const handleAccountInputChange =
+    (field: keyof AccountFormState) =>
+    (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const value = event.target.value;
+      setAccountForm((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+      clearAccountError(field);
+    };
+
+  const handleCategoryChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const { value } = event.target;
+    setAccountForm((prev) => {
+      const validServiceIds = new Set(
+        services.filter((service) => service.categoryId === value).map((service) => service.id)
+      );
+      return {
+        ...prev,
+        categoryId: value,
+        serviceIds: prev.serviceIds.filter((id) => validServiceIds.has(id)),
+      };
+    });
+    clearAccountError('categoryId');
+    clearAccountError('serviceIds');
+  };
+
+  const handleServiceToggle = (serviceId: string) => {
+    setAccountForm((prev) => {
+      const exists = prev.serviceIds.includes(serviceId);
+      return {
+        ...prev,
+        serviceIds: exists
+          ? prev.serviceIds.filter((id) => id !== serviceId)
+          : [...prev.serviceIds, serviceId],
+      };
+    });
+    clearAccountError('serviceIds');
+  };
+
+  const handleAccountSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const errors: Record<string, string> = {};
+
+    if (!accountForm.name.trim()) {
+      errors.name = 'El nombre es obligatorio';
+    }
+    if (!accountForm.address.trim()) {
+      errors.address = 'La dirección es obligatoria';
+    }
+
+    const latitude = parseFloat(accountForm.latitude);
+    if (accountForm.latitude.trim() === '' || Number.isNaN(latitude)) {
+      errors.latitude = 'Ingresá una latitud válida';
+    }
+
+    const longitude = parseFloat(accountForm.longitude);
+    if (accountForm.longitude.trim() === '' || Number.isNaN(longitude)) {
+      errors.longitude = 'Ingresá una longitud válida';
+    }
+
+    if (!accountForm.categoryId) {
+      errors.categoryId = 'Seleccioná una categoría';
+    }
+
+    const validServiceIds = new Set(
+      services.filter((service) => service.categoryId === accountForm.categoryId).map((service) => service.id)
+    );
+    const normalizedServiceIds = accountForm.serviceIds.filter((id) => validServiceIds.has(id));
+    if (normalizedServiceIds.length === 0) {
+      errors.serviceIds = 'Seleccioná al menos un servicio';
+    }
+
+    setAccountErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
+
+    if (!workshop) {
+      setAccountApiError('No se encontró información del workshop para actualizar.');
+      return;
+    }
+
+    setAccountSaving(true);
+    setAccountApiError('');
+    setAccountMessage('');
+
+    try {
+      await apiService.updateWorkshop(workshop.id, {
+        name: accountForm.name.trim(),
+        address: accountForm.address.trim(),
+        phoneNumber: accountForm.phoneNumber.trim(),
+      });
+
+      await apiService.completeOnboarding({
+        name: accountForm.name.trim(),
+        address: accountForm.address.trim(),
+        latitude,
+        longitude,
+        categoryId: accountForm.categoryId,
+        serviceIds: normalizedServiceIds,
+      });
+
+      setAccountMessage('Datos del taller actualizados correctamente.');
+      await loadWorkshop();
+    } catch (err: any) {
+      if (axios.isAxiosError(err)) {
+        setAccountApiError(err.response?.data?.message || err.message);
+      } else {
+        setAccountApiError('No se pudieron guardar los cambios. Intentá nuevamente.');
+      }
+    } finally {
+      setAccountSaving(false);
+    }
   };
 
   if (loading) {
@@ -279,6 +446,10 @@ const Dashboard: React.FC = () => {
 
   const userName = user || 'Usuario';
   const displayName = userName.split('@')[0] || userName;
+  const filteredServices = accountForm.categoryId
+    ? services.filter((service) => service.categoryId === accountForm.categoryId)
+    : [];
+  const selectedCategory = categories.find((category) => category.id === accountForm.categoryId);
 
   return (
     <div className="h-screen bg-background flex overflow-hidden">
@@ -432,7 +603,12 @@ const Dashboard: React.FC = () => {
               <DropdownMenuSeparator />
 
               {/* Menu Items */}
-              <DropdownMenuItem onClick={() => setActiveSection('settings')}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setActiveSection('account');
+                    setSidebarOpen(false);
+                  }}
+                >
                 <User className="h-4 w-4 mr-2" />
                 <span>Cuenta</span>
               </DropdownMenuItem>
@@ -623,7 +799,12 @@ const Dashboard: React.FC = () => {
                 <DropdownMenuSeparator />
 
                 {/* Menu Items */}
-                <DropdownMenuItem onClick={() => setActiveSection('settings')}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setActiveSection('account');
+                    setSidebarOpen(false);
+                  }}
+                >
                   <User className="h-4 w-4 mr-2" />
                   <span>Cuenta</span>
                 </DropdownMenuItem>
@@ -839,7 +1020,7 @@ const Dashboard: React.FC = () => {
                             fill="var(--color-profile)"
                           />
                           <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
-                            <Label
+                            <RechartsLabel
                               content={({ viewBox }) => {
                                 if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                                   return (
@@ -990,6 +1171,197 @@ const Dashboard: React.FC = () => {
               </div>
             )}
 
+            {/* Account Section */}
+            {activeSection === 'account' && (
+              <div className="space-y-6">
+                <Card className="shadow-md border border-border/60">
+                  <CardHeader>
+                    <CardTitle className="text-xl font-semibold">Datos del taller</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Mantené actualizada la información que mostrás a tus clientes y que utilizamos para recomendar tus servicios.
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    {accountApiError && (
+                      <div className="mb-4 rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+                        {accountApiError}
+                      </div>
+                    )}
+                    {accountMessage && (
+                      <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-400">
+                        {accountMessage}
+                      </div>
+                    )}
+
+                    {categories.length === 0 || services.length === 0 ? (
+                      <div className="bg-muted rounded-lg p-6 text-center text-muted-foreground">
+                        Cargando información del taller...
+                      </div>
+                    ) : (
+                      <form onSubmit={handleAccountSubmit} className="space-y-6">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="sm:col-span-2 space-y-2">
+                            <Label htmlFor="account-name">Nombre del taller</Label>
+                            <Input
+                              id="account-name"
+                              value={accountForm.name}
+                              onChange={handleAccountInputChange('name')}
+                              placeholder="Ej: Taller Mecánico El Buen Servicio"
+                            />
+                            {accountErrors.name && (
+                              <p className="text-sm text-destructive">{accountErrors.name}</p>
+                            )}
+                          </div>
+
+                          <div className="sm:col-span-2 space-y-2">
+                            <Label htmlFor="account-address">Dirección</Label>
+                            <textarea
+                              id="account-address"
+                              value={accountForm.address}
+                              onChange={handleAccountInputChange('address')}
+                              placeholder="Ej: Av. Principal 1234, Ciudad, Provincia"
+                              className="min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                            />
+                            {accountErrors.address && (
+                              <p className="text-sm text-destructive">{accountErrors.address}</p>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="account-phone">Teléfono de contacto</Label>
+                            <Input
+                              id="account-phone"
+                              value={accountForm.phoneNumber}
+                              onChange={handleAccountInputChange('phoneNumber')}
+                              placeholder="Ej: +54 11 5555-5555"
+                            />
+                            {accountErrors.phoneNumber && (
+                              <p className="text-sm text-destructive">{accountErrors.phoneNumber}</p>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="account-latitude">Latitud</Label>
+                            <Input
+                              id="account-latitude"
+                              value={accountForm.latitude}
+                              onChange={handleAccountInputChange('latitude')}
+                              placeholder="-34.6037"
+                            />
+                            {accountErrors.latitude && (
+                              <p className="text-sm text-destructive">{accountErrors.latitude}</p>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="account-longitude">Longitud</Label>
+                            <Input
+                              id="account-longitude"
+                              value={accountForm.longitude}
+                              onChange={handleAccountInputChange('longitude')}
+                              placeholder="-58.3816"
+                            />
+                            {accountErrors.longitude && (
+                              <p className="text-sm text-destructive">{accountErrors.longitude}</p>
+                            )}
+                          </div>
+
+                          <div className="sm:col-span-2 space-y-2">
+                            <Label htmlFor="account-category">Categoría principal</Label>
+                            <select
+                              id="account-category"
+                              value={accountForm.categoryId}
+                              onChange={handleCategoryChange}
+                              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                            >
+                              <option value="">Seleccioná una categoría</option>
+                              {categories.map((category) => (
+                                <option key={category.id} value={category.id}>
+                                  {category.name}
+                                </option>
+                              ))}
+                            </select>
+                            {selectedCategory && (
+                              <p className="text-xs text-muted-foreground">
+                                {selectedCategory.description ||
+                                  'Esta categoría agrupa servicios relacionados con tu rubro.'}
+                              </p>
+                            )}
+                            {accountErrors.categoryId && (
+                              <p className="text-sm text-destructive">{accountErrors.categoryId}</p>
+                            )}
+                          </div>
+
+                          <div className="sm:col-span-2 space-y-2">
+                            <Label>Servicios ofrecidos</Label>
+                            {filteredServices.length === 0 ? (
+                              <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 p-4 text-sm text-muted-foreground">
+                                {accountForm.categoryId
+                                  ? 'No hay servicios configurados para esta categoría aún.'
+                                  : 'Seleccioná una categoría para elegir los servicios que brindás.'}
+                              </div>
+                            ) : (
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                {filteredServices.map((service) => {
+                                  const checked = accountForm.serviceIds.includes(service.id);
+                                  return (
+                                    <label
+                                      key={service.id}
+                                      className={`flex items-start gap-3 rounded-lg border p-3 text-sm transition ${
+                                        checked
+                                          ? 'border-primary bg-primary/5'
+                                          : 'border-border hover:border-primary/50 hover:bg-accent/40'
+                                      }`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        className="mt-1 h-4 w-4 accent-primary"
+                                        checked={checked}
+                                        onChange={() => handleServiceToggle(service.id)}
+                                      />
+                                      <div className="flex-1">
+                                        <p className="font-medium text-sm">{service.name}</p>
+                                        {service.description && (
+                                          <p className="text-xs text-muted-foreground mt-1">
+                                            {service.description}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {accountErrors.serviceIds && (
+                              <p className="text-sm text-destructive">{accountErrors.serviceIds}</p>
+                            )}
+                          </div>
+
+                          {workshop?.logoUrl && (
+                            <div className="sm:col-span-2 space-y-1">
+                              <Label>Logo actual</Label>
+                              <p className="text-sm text-muted-foreground break-all">{workshop.logoUrl}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        <Separator />
+
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="text-xs text-muted-foreground">
+                            Esta información se sincroniza con tu onboarding y con el buscador de talleres.
+                          </div>
+                          <Button type="submit" disabled={accountSaving} className="w-full sm:w-auto">
+                            {accountSaving ? 'Guardando cambios...' : 'Guardar cambios'}
+                          </Button>
+                        </div>
+                      </form>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
             {/* Ordenes Section */}
             {activeSection === 'ordenes' && (
               <Card>
@@ -1041,25 +1413,12 @@ const Dashboard: React.FC = () => {
         </div>
       </main>
 
-      {/* Floating Action Button - Comentado temporalmente */}
-      {/* <Button
-        size="icon"
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg hover:scale-110 z-20"
-        style={{ backgroundColor: COLORS.primary }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = COLORS.primaryHover;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = COLORS.primary;
-        }}
-        onClick={() => console.log('Chat opened')}
-      >
-        <ChatBubbleLeftIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-      </Button> */}
-
       {/* Onboarding Progress Badge - Solo mostrar si no está completo */}
       {!showOnboardingWizard && (
-        <OnboardingProgressBadge onContinue={handleContinueOnboarding} />
+      <OnboardingProgressBadge
+        key={`${workshop?.onboardingCompleted}-${showOnboardingWizard}`}
+        onContinue={handleContinueOnboarding}
+      />
       )}
     </div>
   );

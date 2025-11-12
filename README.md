@@ -94,7 +94,7 @@ El sistema utiliza JWT para autenticación:
 
 ### Endpoints consumidos:
 
-- `POST /api/v1/auth/login` - Autenticación
+- `POST /api/v1/auth/login/workshop` - Autenticación de comercios
 - `POST /api/v1/auth/register/workshop` - Registro
 - `GET /api/v1/workshops` - Obtener información del workshop
 - `PUT /api/v1/workshops/{id}` - Actualizar información del workshop
